@@ -23,7 +23,7 @@ export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
           console.log("No tokens for user: ", member);
           continue;
         }
-        sendMessages(message, tokens);
+        await sendMessages(message, tokens);
       }
     } else if (change.type === "modified") {
       console.log("Modified group: ", data);
@@ -35,7 +35,7 @@ export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
           console.log("No tokens for user: ", member);
           continue;
         }
-        sendMessages(message, tokens);
+        await sendMessages(message, tokens);
       }
     } else if (change.type === "removed") {
       console.log("Removed group: ", data);
@@ -68,17 +68,15 @@ function buildNewMessageNotification(): Notification {
   };
 }
 
-function sendMessages(message: Notification, receivers: string[]) {
+async function sendMessages(message: Notification, receivers: string[]) {
   const m = { data: { notifee: JSON.stringify(message) }, tokens: receivers };
-  getMessaging()
-    .sendEachForMulticast(m)
-    .then((response) => {
-      // Response is a message ID string.
-      console.log("Successfully sent message:", response);
-    })
-    .catch((error) => {
-      console.log("Error sending message:", error);
-    });
+
+  try {
+    const response = await getMessaging().sendEachForMulticast(m);
+    console.log("Successfully sent message:", response);
+  } catch (error) {
+    console.log("Error sending message:", error);
+  }
 }
 
 async function getTokensById(uid: string): Promise<string[]> {
