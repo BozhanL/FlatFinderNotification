@@ -5,6 +5,7 @@
   "homepage": "https://github.com/BozhanL/FlatFinderNotification",
   "scripts": {
     "build": "tsc",
+    "prestart": "npm run build",
     "start": "node ./dist/index.js"
   },
   "repository": {
