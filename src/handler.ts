@@ -1,4 +1,4 @@
-import type { Notification } from "@notifee/react-native";
+import type { AndroidCategory, Notification } from "@notifee/react-native";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import {
@@ -23,7 +23,7 @@ export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
     if (change.type === "added") {
       console.log("New group: ", data);
 
-      for (const member of data.members.filter((m) => m !== data.lastSender)) {
+      for (const member of data.members) {
         const message = buildNewMatchNotification();
         const tokens = await getTokensById(member);
         if (tokens.length === 0) {
@@ -36,7 +36,7 @@ export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
       console.log("Modified group: ", data);
 
       for (const member of data.members.filter((m) => m !== data.lastSender)) {
-        const message = buildNewMessageNotification();
+        const message = await buildNewMessageNotification(data, member);
         const tokens = await getTokensById(member);
         if (tokens.length === 0) {
           console.log("No tokens for user: ", member);
@@ -61,16 +61,34 @@ function buildNewMatchNotification(): Notification {
     body: "You have a new match!",
     android: {
       channelId: MESSAGE_CHANNEL_ID,
+      category: "msg" as AndroidCategory,
+      pressAction: { id: "default", launchActivity: "default" },
     },
   };
 }
 
-function buildNewMessageNotification(): Notification {
+async function buildNewMessageNotification(
+  group: Group,
+  uid: string,
+): Promise<Notification> {
+  if (!group.name) {
+    const db = getFirestore();
+    const other = group.members.find((m) => m !== uid);
+    if (other) {
+      const groupRef = db.collection("message_test_user").doc(other);
+      const data = await groupRef.get();
+      group.name = data.data()?.["name"];
+    }
+  }
+
   return {
     title: "New Message",
     body: "You have a new message!",
+    data: { gid: group.id, uid: uid, gname: group.name || "Unknown" },
     android: {
       channelId: MESSAGE_CHANNEL_ID,
+      category: "msg" as AndroidCategory,
+      pressAction: { id: "default", launchActivity: "default" },
     },
   };
 }
