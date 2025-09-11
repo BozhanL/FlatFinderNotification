@@ -1,6 +1,7 @@
 import type { Notification } from "@notifee/react-native";
 import { FieldValue, getFirestore, Timestamp } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
+import { GROUP_COLLECTION_NAME, MESSAGE_CHANNEL_ID } from "./consts.js";
 
 export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
   const db = getFirestore();
@@ -42,7 +43,7 @@ export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
     }
 
     const groupId = data.id;
-    const groupRef = db.collection("groups").doc(groupId);
+    const groupRef = db.collection(GROUP_COLLECTION_NAME).doc(groupId);
     await groupRef.update({ lastNotified: FieldValue.serverTimestamp() });
   });
 }
@@ -52,7 +53,7 @@ function buildNewMatchNotification(): Notification {
     title: "New Match",
     body: "You have a new match!",
     android: {
-      channelId: "messages",
+      channelId: MESSAGE_CHANNEL_ID,
     },
   };
 }
@@ -62,7 +63,7 @@ function buildNewMessageNotification(): Notification {
     title: "New Message",
     body: "You have a new message!",
     android: {
-      channelId: "messages",
+      channelId: MESSAGE_CHANNEL_ID,
     },
   };
 }
