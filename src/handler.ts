@@ -1,7 +1,14 @@
 import type { Notification } from "@notifee/react-native";
-import { FieldValue, getFirestore, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
-import { GROUP_COLLECTION_NAME, MESSAGE_CHANNEL_ID } from "./consts.js";
+import {
+  GROUP_COLLECTION_NAME,
+  MESSAGE_CHANNEL_ID,
+  NOTIFICATION_COLLECTION_NAME,
+  TOKEN_EXPIRATION_TIME,
+  TOKEN_NOT_REGISTERED,
+} from "./consts.js";
+import type { Group, NotificationData } from "./types.js";
 
 export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
   const db = getFirestore();
@@ -74,14 +81,23 @@ async function sendMessages(message: Notification, receivers: string[]) {
   try {
     const response = await getMessaging().sendEachForMulticast(m);
     console.log("Successfully sent message:", response);
+
+    response.responses.forEach((resp, index) => {
+      if (!resp.success) {
+        console.error("Failed to send to token:", receivers[index], resp.error);
+        if (resp.error?.code === TOKEN_NOT_REGISTERED && receivers[index]) {
+          deleteToken(receivers[index]);
+        }
+      }
+    });
   } catch (error) {
-    console.log("Error sending message:", error);
+    console.error("Error sending message:", error);
   }
 }
 
 async function getTokensById(uid: string): Promise<string[]> {
   const db = getFirestore();
-  const notificationsRef = db.collection("notifications");
+  const notificationsRef = db.collection(NOTIFICATION_COLLECTION_NAME);
   const snapshot = await notificationsRef.where("uid", "==", uid).get();
   if (snapshot.empty) {
     return [];
@@ -92,18 +108,29 @@ async function getTokensById(uid: string): Promise<string[]> {
     .map((data) => data.token);
 }
 
-type NotificationData = {
-  uid: string;
-  token: string;
-  timestamp: Timestamp;
-};
+export async function removeOldTokens() {
+  const db = getFirestore();
+  const notificationsRef = db.collection(NOTIFICATION_COLLECTION_NAME);
+  const snapshot = await notificationsRef
+    .where("timestamp", "<", Date.now() - TOKEN_EXPIRATION_TIME)
+    .get();
+  if (snapshot.empty) {
+    console.log("No old tokens to remove.");
+    return;
+  }
 
-type Group = {
-  id: string;
-  name: string | null;
-  members: string[];
-  lastTimestamp: Timestamp;
-  lastMessage: string;
-  lastSender: string;
-  lastNotified: Timestamp;
-};
+  const batch = db.batch();
+  snapshot.docs.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+  await batch.commit();
+  console.log("Removed old tokens.");
+}
+
+async function deleteToken(token: string) {
+  const db = getFirestore();
+  const notificationsRef = db
+    .collection(NOTIFICATION_COLLECTION_NAME)
+    .doc(token);
+  await notificationsRef.delete();
+}
