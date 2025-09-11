@@ -1,0 +1,12 @@
+services:
+  notification:
+    build:
+      context: https://github.com/BozhanL/FlatFinderNotification.git
+    secrets:
+      - serviceAccountKey
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/serviceAccountKey
+
+secrets:
+  serviceAccountKey:
+    file: ./path/to/serviceAccountKey.json
