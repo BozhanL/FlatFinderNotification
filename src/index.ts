@@ -1,11 +1,10 @@
+import "dotenv/config";
+
 import { CronJob } from "cron";
-import dotenv from "dotenv";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { GROUP_COLLECTION_NAME } from "./consts.js";
 import { handleMessageUpdate, removeOldTokens } from "./handler.js";
-
-dotenv.config();
 
 initializeApp();
 

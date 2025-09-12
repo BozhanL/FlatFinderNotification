@@ -1,6 +1,7 @@
 import type { AndroidCategory, Notification } from "@notifee/react-native";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
+import type Mail from "nodemailer/lib/mailer/index.js";
 import {
   GROUP_COLLECTION_NAME,
   MESSAGE_CHANNEL_ID,
@@ -8,6 +9,7 @@ import {
   TOKEN_EXPIRATION_TIME,
   TOKEN_NOT_REGISTERED,
 } from "./consts.js";
+import { sendEmail } from "./email.js";
 import type { Group, NotificationData } from "./types.js";
 
 export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
@@ -23,6 +25,7 @@ export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
     if (change.type === "added") {
       console.log("New group: ", data);
 
+      const emails: Mail.Address[] = [];
       for (const member of data.members) {
         const message = buildNewMatchNotification();
         const tokens = await getTokensById(member);
@@ -31,7 +34,20 @@ export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
           continue;
         }
         await sendMessages(message, tokens);
+
+        const userRef = db.collection("message_test_user").doc(member);
+        const userDoc = await userRef.get();
+        const userData = userDoc.data();
+        if (userData?.["email"]) {
+          emails.push(userData["email"]);
+        }
       }
+
+      await sendEmail(
+        emails,
+        "[FlatFinder] You have a new match!",
+        "Open the app to see your new match.",
+      );
     } else if (change.type === "modified") {
       console.log("Modified group: ", data);
 
