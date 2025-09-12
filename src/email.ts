@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function sendEmail(
-  to: Mail.Address[],
+  to: (Mail.Address | string)[],
   subject: string,
   body: string,
 ) {

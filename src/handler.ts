@@ -1,4 +1,5 @@
 import type { AndroidCategory, Notification } from "@notifee/react-native";
+import { getAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import type Mail from "nodemailer/lib/mailer/index.js";
@@ -25,7 +26,7 @@ export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
     if (change.type === "added") {
       console.log("New group: ", data);
 
-      const emails: Mail.Address[] = [];
+      const emails: (Mail.Address | string)[] = [];
       for (const member of data.members) {
         const message = buildNewMatchNotification();
         const tokens = await getTokensById(member);
@@ -35,11 +36,9 @@ export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
         }
         await sendMessages(message, tokens);
 
-        const userRef = db.collection("message_test_user").doc(member);
-        const userDoc = await userRef.get();
-        const userData = userDoc.data();
-        if (userData?.["email"]) {
-          emails.push(userData["email"]);
+        const user = await getAuth().getUser(member);
+        if (user?.email) {
+          emails.push(user.email);
         }
       }
 
