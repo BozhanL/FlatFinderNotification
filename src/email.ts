@@ -23,11 +23,15 @@ export async function sendEmail(
     return;
   }
 
-  await transporter.sendMail({
-    from: process.env["SMTP_FROM"],
-    to: process.env["SMTP_FROM"],
-    bcc: to,
-    subject,
-    text: body,
-  });
+  await Promise.all(
+    to
+      .map((address) => ({
+        from: process.env["SMTP_FROM"],
+        to: address,
+        bcc: process.env["SMTP_FROM"],
+        subject,
+        text: body,
+      }))
+      .map((email) => transporter.sendMail(email)),
+  );
 }
