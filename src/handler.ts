@@ -32,9 +32,9 @@ export function handleMessageUpdate(snapshot: FirebaseFirestore.QuerySnapshot) {
         const tokens = await getTokensById(member);
         if (tokens.length === 0) {
           console.log("No tokens for user: ", member);
-          continue;
+        } else {
+          await sendMessages(message, tokens);
         }
-        await sendMessages(message, tokens);
 
         const user = await getAuth().getUser(member);
         if (user?.email) {
